@@ -4,6 +4,7 @@ import urllib.request
 import playsound
 import os
 import whisper
+import re
 import speech_recognition as sr
 
 
@@ -55,7 +56,6 @@ def SpeechToText(audio):
     try:
         Recogniser = sr.Recognizer()
         text = Recogniser.recognize_whisper(audio, language="english", model="tiny")
-        print(text)
         return text
     except sr.UnknownValueError:
         print("Whisper could not understand audio")
@@ -68,23 +68,36 @@ def AssisstantAudioOutput(jsonResponse):
     urllib.request.urlretrieve(responseAudioURL, "voice.mp3")
     playsound.playsound("voice.mp3")
     os.remove("voice.mp3")
-    if "goodbye" in jsonResponse["output"]["text"] or "Goodbye" in jsonResponse["output"]["text"]:
+    if "goodbye" in text or "bye" in text:
         os._exit(0)
+
+
+def StripVoiceInputPunctuation(text):
+    textNoPunc = re.sub(pattern="[^\w\s]", repl="", string=text)
+    return textNoPunc
 
 
 def UserInput():
     audio = VoiceRecog()
     text = SpeechToText(audio)
+    text = StripVoiceInputPunctuation(text)
     return text
 
 
 listening = True
 while listening == True:
     text = UserInput()
-    if "Hey, Ajax" in text:
+    print(text.lower())
+    if "hey ajax" in text.lower():
         Converse = True
         ConverseCount = 0
         while Converse == True:
-            ConverseCount += 1
-            jsonResponse = CarterChatCall()
-            AssisstantAudioOutput(jsonResponse)
+            if ConverseCount == 0:
+                jsonResponse = CarterChatCall()
+                AssisstantAudioOutput(jsonResponse)
+                ConverseCount += 1
+            else:
+                text = UserInput()
+                jsonResponse = CarterChatCall()
+                AssisstantAudioOutput(jsonResponse)
+                ConverseCount += 1
